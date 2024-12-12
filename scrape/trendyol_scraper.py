@@ -5,6 +5,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 import pandas as pd
+import os
+
+# Create data directory if it doesn't exist
+data_directory = "data"
+if not os.path.exists(data_directory):
+    os.makedirs(data_directory)
 
 def comprehensive_scroll(driver):
     # Scroll until no more new content is loaded
@@ -78,8 +84,9 @@ for i in range(1, total_comments + 1):
         "Yıldız Sayısı": star_count
     })
 
+output_file = os.path.join(data_directory, 'macbook_product_comments_with_ratings.csv')
 df = pd.DataFrame(data)
-df.to_csv('macbook_product_comments_with_ratings.csv', index=False, encoding='utf-8-sig')
-print(f"Total {len(data)} comments extracted and saved.")
+df.to_csv(output_file, index=False, encoding='utf-8-sig')
+print(f"Total {len(data)} comments extracted and saved to {output_file}")
 
 driver.quit()
