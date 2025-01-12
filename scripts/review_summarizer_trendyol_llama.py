@@ -1,26 +1,25 @@
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from transformers import (
-    AutoTokenizer,
-    AutoModelForSequenceClassification,
-    pipeline
-)
-import torch
 import os
-import requests
-from collections import Counter
+import re
 import warnings
+from collections import Counter
+
+import matplotlib.pyplot as plt
+import nltk
+import numpy as np
+import pandas as pd
+import requests
+import seaborn as sns
+import torch
 from nltk.tokenize import word_tokenize
 from nltk.util import ngrams
-import nltk
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 from wordcloud import WordCloud
-import re
-warnings.filterwarnings('ignore')
 
-nltk.download('stopwords')
-nltk.download('punkt')
+warnings.filterwarnings("ignore")
+
+nltk.download("stopwords")
+nltk.download("punkt")
+
 
 class ReviewAnalyzer:
     def __init__(self):
@@ -31,23 +30,73 @@ class ReviewAnalyzer:
         # Lojistik ve satıcı ile ilgili kelimeleri tanımla
         self.logistics_seller_words = {
             # Kargo ve teslimat ile ilgili
-            'kargo', 'kargocu', 'paket', 'paketleme', 'teslimat', 'teslim',
-            'gönderi', 'gönderim', 'ulaştı', 'ulaşım', 'geldi', 'kurye',
-            'dağıtım', 'hasarlı', 'hasar', 'kutu', 'ambalaj', 'zamanında',
-            'geç', 'hızlı', 'yavaş', 'günde', 'saatte',
-
+            "kargo",
+            "kargocu",
+            "paket",
+            "paketleme",
+            "teslimat",
+            "teslim",
+            "gönderi",
+            "gönderim",
+            "ulaştı",
+            "ulaşım",
+            "geldi",
+            "kurye",
+            "dağıtım",
+            "hasarlı",
+            "hasar",
+            "kutu",
+            "ambalaj",
+            "zamanında",
+            "geç",
+            "hızlı",
+            "yavaş",
+            "günde",
+            "saatte",
             # Satıcı ve mağaza ile ilgili
-            'satıcı', 'mağaza', 'sipariş', 'trendyol', 'tedarik', 'stok',
-            'garanti', 'fatura', 'iade', 'geri', 'müşteri', 'hizmet',
-            'destek', 'iletişim', 'şikayet', 'sorun', 'çözüm', 'hediye',
-
+            "satıcı",
+            "mağaza",
+            "sipariş",
+            "trendyol",
+            "tedarik",
+            "stok",
+            "garanti",
+            "fatura",
+            "iade",
+            "geri",
+            "müşteri",
+            "hizmet",
+            "destek",
+            "iletişim",
+            "şikayet",
+            "sorun",
+            "çözüm",
+            "hediye",
             # Fiyat ve ödeme ile ilgili
-            'fiyat', 'ücret', 'para', 'bedava', 'ücretsiz', 'indirim',
-            'kampanya', 'taksit', 'ödeme', 'bütçe', 'hesap', 'kur',
-
+            "fiyat",
+            "ücret",
+            "para",
+            "bedava",
+            "ücretsiz",
+            "indirim",
+            "kampanya",
+            "taksit",
+            "ödeme",
+            "bütçe",
+            "hesap",
+            "kur",
             # Zaman ile ilgili teslimat kelimeleri
-            'bugün', 'yarın', 'dün', 'hafta', 'gün', 'saat', 'süre',
-            'bekleme', 'gecikme', 'erken', 'geç'
+            "bugün",
+            "yarın",
+            "dün",
+            "hafta",
+            "gün",
+            "saat",
+            "süre",
+            "bekleme",
+            "gecikme",
+            "erken",
+            "geç",
         }
 
     def get_turkish_stopwords(self):
@@ -58,19 +107,66 @@ class ReviewAnalyzer:
         try:
             response = requests.get(github_url)
             if response.status_code == 200:
-                github_stops = set(word.strip() for word in response.text.split('\n') if word.strip())
+                github_stops = set(
+                    word.strip() for word in response.text.split("\n") if word.strip()
+                )
                 stop_words.update(github_stops)
         except Exception as e:
             print(f"GitHub'dan stop words çekilirken hata oluştu: {e}")
 
-        stop_words.update(set(nltk.corpus.stopwords.words('turkish')))
+        stop_words.update(set(nltk.corpus.stopwords.words("turkish")))
 
-        additional_stops = {'bir', 've', 'çok', 'bu', 'de', 'da', 'için', 'ile', 'ben', 'sen',
-                          'o', 'biz', 'siz', 'onlar', 'bu', 'şu', 'ama', 'fakat', 'ancak',
-                          'lakin', 'ki', 'dahi', 'mi', 'mı', 'mu', 'mü', 'var', 'yok',
-                          'olan', 'içinde', 'üzerinde', 'bana', 'sana', 'ona', 'bize',
-                          'size', 'onlara', 'evet', 'hayır', 'tamam', 'oldu', 'olmuş',
-                          'olacak', 'etmek', 'yapmak', 'kez', 'kere', 'defa', 'adet'}
+        additional_stops = {
+            "bir",
+            "ve",
+            "çok",
+            "bu",
+            "de",
+            "da",
+            "için",
+            "ile",
+            "ben",
+            "sen",
+            "o",
+            "biz",
+            "siz",
+            "onlar",
+            "bu",
+            "şu",
+            "ama",
+            "fakat",
+            "ancak",
+            "lakin",
+            "ki",
+            "dahi",
+            "mi",
+            "mı",
+            "mu",
+            "mü",
+            "var",
+            "yok",
+            "olan",
+            "içinde",
+            "üzerinde",
+            "bana",
+            "sana",
+            "ona",
+            "bize",
+            "size",
+            "onlara",
+            "evet",
+            "hayır",
+            "tamam",
+            "oldu",
+            "olmuş",
+            "olacak",
+            "etmek",
+            "yapmak",
+            "kez",
+            "kere",
+            "defa",
+            "adet",
+        }
         stop_words.update(additional_stops)
 
         print(f"Toplam {len(stop_words)} adet stop words yüklendi.")
@@ -82,16 +178,16 @@ class ReviewAnalyzer:
             # Küçük harfe çevir
             text = text.lower()
             # Özel karakterleri temizle
-            text = re.sub(r'[^\w\s]', '', text)
+            text = re.sub(r"[^\w\s]", "", text)
             # Sayıları temizle
-            text = re.sub(r'\d+', '', text)
+            text = re.sub(r"\d+", "", text)
             # Fazla boşlukları temizle
-            text = re.sub(r'\s+', ' ', text).strip()
+            text = re.sub(r"\s+", " ", text).strip()
             # Stop words'leri çıkar
             words = text.split()
             words = [word for word in words if word not in self.turkish_stopwords]
-            return ' '.join(words)
-        return ''
+            return " ".join(words)
+        return ""
 
     def setup_sentiment_model(self):
         """Sentiment analiz modelini hazırla"""
@@ -115,12 +211,12 @@ class ReviewAnalyzer:
             "text-generation",
             model=model_id,
             torch_dtype="auto",
-            device_map='auto',
+            device_map="auto",
         )
 
         self.terminators = [
             self.summary_pipe.tokenizer.eos_token_id,
-            self.summary_pipe.tokenizer.convert_tokens_to_ids("<|eot_id|>")
+            self.summary_pipe.tokenizer.convert_tokens_to_ids("<|eot_id|>"),
         ]
 
         self.sampling_params = {
@@ -128,28 +224,32 @@ class ReviewAnalyzer:
             "temperature": 0.3,
             "top_k": 50,
             "top_p": 0.9,
-            "repetition_penalty": 1.1
+            "repetition_penalty": 1.1,
         }
 
     def filter_reviews(self, df):
         """Ürün ile ilgili olmayan yorumları filtrele"""
+
         def is_product_review(text):
             if not isinstance(text, str):
                 return False
             return not any(word in text.lower() for word in self.logistics_seller_words)
 
-        filtered_df = df[df['Yorum'].apply(is_product_review)].copy()
+        filtered_df = df[df["Yorum"].apply(is_product_review)].copy()
 
         print(f"\nFiltreleme İstatistikleri:")
         print(f"Toplam yorum sayısı: {len(df)}")
         print(f"Ürün yorumu sayısı: {len(filtered_df)}")
         print(f"Filtrelenen yorum sayısı: {len(df) - len(filtered_df)}")
-        print(f"Filtreleme oranı: {((len(df) - len(filtered_df)) / len(df) * 100):.2f}%")
+        print(
+            f"Filtreleme oranı: {((len(df) - len(filtered_df)) / len(df) * 100):.2f}%"
+        )
 
         return filtered_df
 
     def analyze_sentiment(self, df):
         """Sentiment analizi yap"""
+
         def predict_sentiment(text):
             if not isinstance(text, str) or len(text.strip()) == 0:
                 return {"label": "Nötr", "score": 0.5}
@@ -162,7 +262,7 @@ class ReviewAnalyzer:
                     return_tensors="pt",
                     truncation=True,
                     max_length=512,
-                    padding=True
+                    padding=True,
                 ).to(self.device)
 
                 with torch.no_grad():
@@ -190,44 +290,53 @@ class ReviewAnalyzer:
                 return {"label": "Nötr", "score": 0.5}
 
         print("\nSentiment analizi yapılıyor...")
-        results = [predict_sentiment(text) for text in df['Yorum']]
+        results = [predict_sentiment(text) for text in df["Yorum"]]
 
-        df['sentiment_score'] = [r['score'] for r in results]
-        df['sentiment_label'] = [r['label'] for r in results]
-        df['cleaned_text'] = df['Yorum'].apply(self.preprocess_text)
+        df["sentiment_score"] = [r["score"] for r in results]
+        df["sentiment_label"] = [r["label"] for r in results]
+        df["cleaned_text"] = df["Yorum"].apply(self.preprocess_text)
 
         return df
 
     def get_key_phrases(self, text_series):
         """En önemli anahtar kelimeleri bul"""
-        text = ' '.join(text_series.astype(str))
+        text = " ".join(text_series.astype(str))
         words = self.preprocess_text(text).split()
         word_freq = Counter(words)
         # En az 3 kez geçen kelimeleri al
-        return {word: count for word, count in word_freq.items()
-               if count >= 3 and len(word) > 2}
+        return {
+            word: count
+            for word, count in word_freq.items()
+            if count >= 3 and len(word) > 2
+        }
 
     def generate_summary(self, df):
         """Yorumların genel özetini oluştur"""
         # En önemli yorumları seç
-        high_rated = df[df['Yıldız Sayısı'] >= 4]
-        low_rated = df[df['Yıldız Sayısı'] <= 2]
+        high_rated = df[df["Yıldız Sayısı"] >= 4]
+        low_rated = df[df["Yıldız Sayısı"] <= 2]
 
         # Önemli kelimeleri bul
-        positive_phrases = self.get_key_phrases(high_rated['cleaned_text'])
-        negative_phrases = self.get_key_phrases(low_rated['cleaned_text'])
+        positive_phrases = self.get_key_phrases(high_rated["cleaned_text"])
+        negative_phrases = self.get_key_phrases(low_rated["cleaned_text"])
 
         # En anlamlı yorumları seç
-        top_positive = (high_rated.sort_values('sentiment_score', ascending=False)
-                       ['Yorum'].head(3).tolist())
-        top_negative = (low_rated.sort_values('sentiment_score')
-                       ['Yorum'].head(2).tolist())
+        top_positive = (
+            high_rated.sort_values("sentiment_score", ascending=False)["Yorum"]
+            .head(3)
+            .tolist()
+        )
+        top_negative = (
+            low_rated.sort_values("sentiment_score")["Yorum"].head(2).tolist()
+        )
 
         # En sık kullanılan kelimeler
-        pos_features = ', '.join([f"{word} ({count})" for word, count
-                                in list(positive_phrases.items())[:5]])
-        neg_features = ', '.join([f"{word} ({count})" for word, count
-                                in list(negative_phrases.items())[:5]])
+        pos_features = ", ".join(
+            [f"{word} ({count})" for word, count in list(positive_phrases.items())[:5]]
+        )
+        neg_features = ", ".join(
+            [f"{word} ({count})" for word, count in list(negative_phrases.items())[:5]]
+        )
 
         summary_prompt = f"""
         MacBook Air Kullanıcı Yorumları Analizi:
@@ -253,8 +362,11 @@ class ReviewAnalyzer:
         """
 
         messages = [
-            {"role": "system", "content": "Sen bir ürün yorumları analiz uzmanısın. Yorumları özetlerken nesnel ve açık ol."},
-            {"role": "user", "content": summary_prompt}
+            {
+                "role": "system",
+                "content": "Sen bir ürün yorumları analiz uzmanısın. Yorumları özetlerken nesnel ve açık ol.",
+            },
+            {"role": "user", "content": summary_prompt},
         ]
 
         outputs = self.summary_pipe(
@@ -262,10 +374,11 @@ class ReviewAnalyzer:
             max_new_tokens=512,
             eos_token_id=self.terminators,
             return_full_text=False,
-            **self.sampling_params
+            **self.sampling_params,
         )
 
         return outputs[0]["generated_text"]
+
 
 def analyze_reviews(file_path):
     df = pd.read_csv(file_path)
@@ -277,13 +390,15 @@ def analyze_reviews(file_path):
     print("Sentiment analizi başlatılıyor...")
     analyzed_df = analyzer.analyze_sentiment(filtered_df)
 
-    analyzed_df.to_csv('sentiment_analyzed_reviews.csv', index=False, encoding='utf-8-sig')
+    analyzed_df.to_csv(
+        "sentiment_analyzed_reviews.csv", index=False, encoding="utf-8-sig"
+    )
     print("Sentiment analizi tamamlandı ve kaydedildi.")
 
     print("\nÜrün özeti oluşturuluyor...")
     summary = analyzer.generate_summary(analyzed_df)
 
-    with open('urun_ozeti.txt', 'w', encoding='utf-8') as f:
+    with open("urun_ozeti.txt", "w", encoding="utf-8") as f:
         f.write(summary)
 
     print("\nÜrün Özeti:")
@@ -291,5 +406,6 @@ def analyze_reviews(file_path):
     print(summary)
     print("\nÖzet 'urun_ozeti.txt' dosyasına kaydedildi.")
 
+
 if __name__ == "__main__":
-    analyze_reviews('data/macbook_product_comments_with_ratings.csv')
+    analyze_reviews("data/macbook_product_comments_with_ratings.csv")
