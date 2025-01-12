@@ -2,6 +2,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+
+/data
+sentiment_analyzed_reviews.csv
+urun_ozeti.txt
+
+
 # RAG
 chroma_*
 chroma
