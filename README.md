@@ -11,7 +11,7 @@ Automated analysis tool for [Trendyol](https://www.trendyol.com/) product review
 - Review summarization using Gemini LLM
 
 
-## Technical Details
+## Tech Stack
 
 - **Scraping**: Selenium with Chrome
 - **Sentiment Analysis**: [BERT model](https://huggingface.co/savasy/bert-base-turkish-sentiment-cased) trained for Turkish
@@ -51,5 +51,9 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-
 -----
+
+
+https://github.com/user-attachments/assets/e50d26c6-d432-4c9c-8e57-e0d6ec8b2e77
+
+
