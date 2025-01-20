@@ -1,11 +1,13 @@
 import os
 import time
+import requests
+import re
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from scrape.trendyol_scraper import scrape_product_comments
+#from scrape.trendyol_scraper import scrape_product_comments
 from scripts.review_summarizer import analyze_reviews
 
 st.set_page_config(page_title="Trendyol Yorum Analizi", layout="wide")
@@ -64,7 +66,7 @@ Kullanım:
 with st.form("analysis_form"):
     url = st.text_input(
         "Trendyol Ürün Yorumları URL",
-        placeholder="https://www.trendyol.com/.../yorumlar",
+        placeholder="ürünün linki",
     )
     api_key = st.text_input("Gemini API Anahtarı", type="password")
     submitted = st.form_submit_button("Analiz Et")
@@ -79,8 +81,61 @@ if st.session_state.analysis_started:
 
         status_text.text("Yorumlar çekiliyor...")
         progress_bar.progress(0.1)
-        df = scrape_product_comments(url)
+        def scrape_product_comments_v2(url):
+            headers = {
+    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "accept-language": "en-US,en;q=0.9","cache-control": "max-age=0","upgrade-insecure-requests": "1",
+    "user-agent": "Mozilla/5.0 (iPad; CPU OS 14_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/129.0 Mobile/15E148 Safari/605.1.15"}       
+            # Regex ile product_id'yi alıyoruz
+            match = re.search(r"-p-(\d+)", url)
+            if match:
+                product_id = match.group(1)
+                print(f"Product ID: {product_id}")
+            else:
+                print("Product ID not found.")
+            # API URL'si oluşturuluyor
+            api_url = f"https://apigw.trendyol.com/discovery-web-websfxsocialreviewrating-santral/product-reviews-detailed?contentId={product_id}&page=1&order=DESC&orderBy=Score&channelId=1"
+            # 3) Yorumları çekmek için fonksiyon
+            def fetch_reviews(api_url, headers):
+                all_reviews = []
+                try:
+                # İlk isteği yap ve totalPages değerini al
+                    response = requests.get(api_url, headers=headers)
+                    if response.status_code == 200:
+                        data = response.json()
+                        total_pages = data["result"]["productReviews"]["totalPages"]
+                        print(f"Toplam Sayfa: {total_pages}")
+            
+                        # İlk sayfadaki verileri ekle
+                        all_reviews.extend(data["result"]["productReviews"]["content"])
+            
+                        # Kalan sayfaları döngüyle al
+                        for page in range(2, total_pages + 1):
+                            paginated_url = api_url.replace("page=1", f"page={page}")
+                            response = requests.get(paginated_url, headers=headers)
+                            if response.status_code == 200:
+                                page_data = response.json()
+                                all_reviews.extend(page_data["result"]["productReviews"]["content"])
+                            else:
+                                print(f"Sayfa {page} için istek başarısız oldu: {response.status_code}")
+        
+                    else:
+                        print(f"İstek başarısız oldu: {response.status_code}")
+                except Exception as e:
+                    print(f"Bir hata oluştu: {e}")
+    
+                return all_reviews
+            # Yorumları çek
+            reviews = fetch_reviews(api_url, headers)
+            # Artık tüm yorumlar reviews listesinde yer alıyor.
 
+            # 4) Yorumları pandas DataFrame'e dönüştürme
+            reviews_df = pd.DataFrame(reviews)
+            reviews_df = reviews_df.rename(columns={"id": "Kullanıcı_id","userFullName": "Kullanıcı Adı","comment": "Yorum","lastModifiedDate": "Tarih","rate": "Yıldız Sayısı"})
+            reviews_df = reviews_df[["Kullanıcı_id","Kullanıcı Adı","Yorum","Tarih","Yıldız Sayısı"]]
+            return reviews_df
+        df = scrape_product_comments_v2(url)
+        #df = scrape_product_comments(url)
         if df is None or len(df) == 0:
             st.error("Yorumlar çekilemedi. URL'yi kontrol edin.")
             st.session_state.analysis_started = False
