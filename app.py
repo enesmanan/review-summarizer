@@ -10,6 +10,10 @@ import streamlit as st
 #from scrape.trendyol_scraper import scrape_product_comments
 from scripts.review_summarizer import analyze_reviews
 
+if not os.path.exists("data"):
+    os.makedirs("data")
+
+
 st.set_page_config(page_title="Trendyol Yorum Analizi", layout="wide")
 
 
