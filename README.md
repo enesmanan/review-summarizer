@@ -15,21 +15,10 @@ Automated analysis tool for [Trendyol](https://www.trendyol.com/) product review
 
 - **Scraping**: Selenium with Chrome
 - **Sentiment Analysis**: [BERT model](https://huggingface.co/savasy/bert-base-turkish-sentiment-cased) trained for Turkish
-- **Summarization**: Gemini 
+- **Summarization**: Gemini - [Gemini API key](https://aistudio.google.com/app/apikey)
 - **Frontend**: Streamlit
 - **Visualizations**: Plotly
 
-## Prerequisites
-
-- Python 3.10+ (my version: 3.10.6)
-- Chrome/ChromeDriver (Download the matching version for your Chrome from [here](https://googlechromelabs.github.io/chrome-for-testing/))
-- [Gemini API key](https://aistudio.google.com/app/apikey)
-
-**Note**: After downloading ChromeDriver, update its path in `scrape/trendyol_scraper.py`:
-
-```python
-service = Service(r"C:\Users\username\Path\To\chromedriver.exe")
-```
 
 ## Installation
 
